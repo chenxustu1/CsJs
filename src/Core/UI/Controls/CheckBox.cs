@@ -1,149 +1,180 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Html;
+using System.Xml;
 using MorseCode.CsJs.Common.Observable;
+using jQueryApi;
 
 namespace MorseCode.CsJs.UI.Controls
 {
-    public class CheckBox : ControlBase
-    {
-        private CheckBoxElement _checkBox;
+	[ControlParser(typeof(Parser))]
+	public class CheckBox : ControlBase
+	{
+		private CheckBoxElement _input;
 
-        private IBinding _checkedBinding;
-        private IBinding _enabledBinding;
+		private readonly Styles _styles = new Styles();
 
-        protected override void CreateElements()
-        {
-            _checkBox = (CheckBoxElement)Document.CreateElement("input");
-            _checkBox.Type = "checkbox";
-        }
+		private IBinding _checkedBinding;
+		private IBinding _enabledBinding;
 
-        protected override IEnumerable<Element> GetRootElements()
-        {
-            return new[] { _checkBox };
-        }
+		protected override void CreateElements()
+		{
+			_input = (CheckBoxElement)Document.CreateElement("input");
+			_input.Type = "checkbox";
+			jQueryObject inputJQueryObject = jQuery.FromElement(_input);
+			inputJQueryObject.Change(e => OnCheckedChanged());
+			_styles.AttachToElement(_input);
+		}
 
-        private bool Checked
-        {
-            get
-            {
-                EnsureElementsCreated();
-                return _checkBox.Checked;
-            }
-            set
-            {
-                EnsureElementsCreated();
-                if (_checkBox.Checked != value)
-                {
-                    _checkBox.Checked = value;
-                    OnCheckedChanged();
-                }
-            }
-        }
+		protected override IEnumerable<Element> GetRootElements()
+		{
+			return new[] { _input };
+		}
 
-        private event EventHandler CheckedChanged;
+		private bool Checked
+		{
+			get
+			{
+				EnsureElementsCreated();
+				return _input.Checked;
+			}
+			set
+			{
+				EnsureElementsCreated();
+				if (_input.Checked != value)
+				{
+					_input.Checked = value;
+					OnCheckedChanged();
+				}
+			}
+		}
 
-        protected void OnCheckedChanged()
-        {
-            if (CheckedChanged != null)
-            {
-                CheckedChanged(this, EventArgs.Empty);
-            }
-        }
+		private event EventHandler CheckedChanged;
 
-        private bool Enabled
-        {
-            get
-            {
-                EnsureElementsCreated();
-                return !_checkBox.Disabled;
-            }
-            set
-            {
-                EnsureElementsCreated();
-                _checkBox.Disabled = !value;
-            }
-        }
+		protected void OnCheckedChanged()
+		{
+			if (CheckedChanged != null)
+			{
+				CheckedChanged(this, EventArgs.Empty);
+			}
+		}
 
-        public void BindDisabledChecked<T>(IReadableObservableProperty<T> dataContext, Func<T, IReadableObservableProperty<bool>> getCheckedProperty)
-        {
-            SetEnabled(false);
+		private bool Enabled
+		{
+			get
+			{
+				EnsureElementsCreated();
+				return !_input.Disabled;
+			}
+			set
+			{
+				EnsureElementsCreated();
+				_input.Disabled = !value;
+			}
+		}
 
-            EnsureUnbound(_checkedBinding);
+		public void BindDisabledChecked<T>(IReadableObservableProperty<T> dataContext, Func<T, IReadableObservableProperty<bool>> getCheckedProperty)
+		{
+			SetEnabled(false);
 
-            EventHandler updateControlEventHandler = null;
-            _checkedBinding = CreateOneWayBinding(
-                dataContext,
-                d =>
-                {
-                    Action updateControl = () => Checked = getCheckedProperty(d).Value;
-                    updateControlEventHandler = (sender, args) => updateControl();
-                    getCheckedProperty(d).Changed += updateControlEventHandler;
-                    updateControl();
-                },
-                d => getCheckedProperty(d).Changed -= updateControlEventHandler);
-            AddBinding(_checkedBinding);
-        }
+			EnsureUnbound(_checkedBinding);
 
-        public void BindChecked<T>(IReadableObservableProperty<T> dataContext, Func<T, IObservableProperty<bool>> getCheckedProperty)
-        {
-            EnsureUnbound(_checkedBinding);
+			EventHandler updateControlEventHandler = null;
+			_checkedBinding = CreateOneWayBinding(
+				dataContext,
+				d =>
+					{
+						Action updateControl = () => Checked = getCheckedProperty(d).Value;
+						updateControlEventHandler = (sender, args) => updateControl();
+						getCheckedProperty(d).Changed += updateControlEventHandler;
+						updateControl();
+					},
+				d => getCheckedProperty(d).Changed -= updateControlEventHandler);
+			AddBinding(_checkedBinding);
+		}
 
-            EventHandler updateDataContextEventHandler = null;
-            EventHandler updateControlEventHandler = null;
-            _checkedBinding = CreateTwoWayBinding(
-                dataContext,
-                d =>
-                {
-                    Action updateControl = () => Checked = getCheckedProperty(d).Value;
-                    updateControlEventHandler = (sender, args) => updateControl();
-                    getCheckedProperty(d).Changed += updateControlEventHandler;
-                    updateControl();
-                },
-                d => getCheckedProperty(d).Changed -= updateControlEventHandler,
-                d =>
-                {
-                    updateDataContextEventHandler = (sender, args) => getCheckedProperty(d).Value = Checked;
-                    CheckedChanged += updateDataContextEventHandler;
-                },
-                d => CheckedChanged -= updateDataContextEventHandler);
-            AddBinding(_checkedBinding);
-        }
+		public void BindChecked<T>(IReadableObservableProperty<T> dataContext, Func<T, IObservableProperty<bool>> getCheckedProperty)
+		{
+			EnsureUnbound(_checkedBinding);
 
-        private void SetEnabled(bool enabled)
-        {
-            EnsureUnbound(_enabledBinding);
+			EventHandler updateDataContextEventHandler = null;
+			EventHandler updateControlEventHandler = null;
+			_checkedBinding = CreateTwoWayBinding(
+				dataContext,
+				d =>
+					{
+						Action updateControl = () => Checked = getCheckedProperty(d).Value;
+						updateControlEventHandler = (sender, args) => updateControl();
+						getCheckedProperty(d).Changed += updateControlEventHandler;
+						updateControl();
+					},
+				d => getCheckedProperty(d).Changed -= updateControlEventHandler,
+				d =>
+					{
+						updateDataContextEventHandler = (sender, args) => getCheckedProperty(d).Value = Checked;
+						CheckedChanged += updateDataContextEventHandler;
+					},
+				d => CheckedChanged -= updateDataContextEventHandler);
+			AddBinding(_checkedBinding);
+		}
 
-            _enabledBinding = StaticBinding.Instance;
-            Enabled = enabled;
-        }
+		private void SetEnabled(bool enabled)
+		{
+			EnsureUnbound(_enabledBinding);
 
-        public void SetDisabledChecked(bool @checked)
-        {
-            SetEnabled(false);
+			_enabledBinding = StaticBinding.Instance;
+			Enabled = enabled;
+		}
 
-            EnsureUnbound(_checkedBinding);
+		public void SetDisabledChecked(bool @checked)
+		{
+			SetEnabled(false);
 
-            _checkedBinding = StaticBinding.Instance;
-            Checked = @checked;
-        }
+			EnsureUnbound(_checkedBinding);
 
-        public void BindEnabled<T>(IReadableObservableProperty<T> dataContext, Func<T, IReadableObservableProperty<bool>> getEnabledProperty)
-        {
-            EnsureUnbound(_enabledBinding);
+			_checkedBinding = StaticBinding.Instance;
+			Checked = @checked;
+		}
 
-            EventHandler updateControlEventHandler = null;
-            _enabledBinding = CreateOneWayBinding(
-                dataContext,
-                d =>
-                {
-                    Action updateControl = () => Enabled = getEnabledProperty(d).Value;
-                    updateControlEventHandler = (sender, args) => updateControl();
-                    getEnabledProperty(d).Changed += updateControlEventHandler;
-                    updateControl();
-                },
-                d => getEnabledProperty(d).Changed -= updateControlEventHandler);
-            AddBinding(_enabledBinding);
-        }
-    }
+		public void BindEnabled<T>(IReadableObservableProperty<T> dataContext, Func<T, IReadableObservableProperty<bool>> getEnabledProperty)
+		{
+			EnsureUnbound(_enabledBinding);
+
+			EventHandler updateControlEventHandler = null;
+			_enabledBinding = CreateOneWayBinding(
+				dataContext,
+				d =>
+					{
+						Action updateControl = () => Enabled = getEnabledProperty(d).Value;
+						updateControlEventHandler = (sender, args) => updateControl();
+						getEnabledProperty(d).Changed += updateControlEventHandler;
+						updateControl();
+					},
+				d => getEnabledProperty(d).Changed -= updateControlEventHandler);
+			AddBinding(_enabledBinding);
+		}
+
+		public Styles Styles
+		{
+			get { return _styles; }
+		}
+
+		public class Parser : ControlParserBase<CheckBox>
+		{
+			protected override CheckBox CreateControl(XmlNode node, Dictionary<string, ControlBase> childControlsById)
+			{
+				return new CheckBox();
+			}
+
+			protected override void ParseAttributeAfterSkin(string name, string value, Dictionary<string, ControlBase> childControlsById, Action<Action<CheckBox>> addPostSkinAction)
+			{
+				base.ParseAttributeAfterSkin(name, value, childControlsById, addPostSkinAction);
+
+				if (name.ToLower() == "style")
+				{
+					addPostSkinAction(control => control.Styles.ParseStyleString(value));
+				}
+			}
+		}
+	}
 }

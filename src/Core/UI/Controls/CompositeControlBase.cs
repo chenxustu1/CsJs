@@ -4,92 +4,67 @@ using System.Linq;
 
 namespace MorseCode.CsJs.UI.Controls
 {
-    public abstract class CompositeControlBase : ControlBase, ICompositeControl
-    {
-        private readonly ControlCollection _controls;
+	public abstract class CompositeControlBase : ControlBase, ICompositeControl
+	{
+		private readonly ControlCollection _controls;
 
-        private bool _childControlsCreated;
+		private bool _childControlsCreated;
 
-        protected CompositeControlBase()
-        {
-            _controls = new ControlCollection(this);
-            _controls.ControlAdded += (sender, args) => ChangeControl(args.Control, true);
-            _controls.ControlRemoved += (sender, args) => ChangeControl(args.Control, false);
-            _controls.ControlsReset += (sender, args) =>
-                {
-                    args.OldControls.ForEach(c => ChangeControl(c, false));
-                    args.NewControls.ForEach(c => ChangeControl(c, true));
-                };
-        }
+		protected CompositeControlBase()
+		{
+			_controls = new ControlCollection(GetChildElementContainerInternal);
+		}
 
-        private void ChangeControl(ControlBase control, bool add)
-        {
-            Element container = GetChildElementContainerInternal();
-            if (add)
-            {
-                control.AddControlTo(container);
-            }
-            else
-            {
-                control.RemoveControlFrom(container);
-            }
-        }
+		protected IEnumerable<IControl> Controls
+		{
+			get { return _controls; }
+		}
 
-        protected IEnumerable<IControl> Controls
-        {
-            get { return _controls; }
-        }
+		public override void AddControlTo(Element container)
+		{
+			EnsureChildControlsCreated();
 
-        internal void RemoveChildControl(ControlBase control)
-        {
-            _controls.Remove(control);
-        }
+			base.AddControlTo(container);
+		}
 
-        public override void AddControlTo(Element container)
-        {
-            EnsureChildControlsCreated();
+		public override void RemoveControlFrom(Element container)
+		{
+			EnsureChildControlsCreated();
 
-            base.AddControlTo(container);
-        }
+			base.RemoveControlFrom(container);
+		}
 
-        public override void RemoveControlFrom(Element container)
-        {
-            EnsureChildControlsCreated();
+		protected void EnsureChildControlsCreated()
+		{
+			EnsureElementsCreated();
 
-            base.RemoveControlFrom(container);
-        }
+			if (!_childControlsCreated)
+			{
+				CreateChildControls(_controls);
+				_childControlsCreated = true;
+			}
+		}
 
-        protected void EnsureChildControlsCreated()
-        {
-            EnsureElementsCreated();
+		protected abstract void CreateChildControls(ControlCollection controls);
 
-            if (!_childControlsCreated)
-            {
-                CreateChildControls(_controls);
-                _childControlsCreated = true;
-            }
-        }
+		internal Element GetChildElementContainerInternal()
+		{
+			EnsureElementsCreated();
+			return GetChildElementContainer();
+		}
 
-        protected abstract void CreateChildControls(ControlCollection controls);
+		protected abstract Element GetChildElementContainer();
 
-        internal Element GetChildElementContainerInternal()
-        {
-            EnsureElementsCreated();
-            return GetChildElementContainer();
-        }
+		protected override void OnDispose()
+		{
+			base.OnDispose();
 
-        protected abstract Element GetChildElementContainer();
-
-        protected override void OnDispose()
-        {
-            base.OnDispose();
-
-            List<ControlBase> controls = _controls.ToList();
-            _controls.Clear();
-            foreach (ControlBase control in controls)
-            {
-                control.Dispose();
-            }
-        }
-    }
+			List<ControlBase> controls = _controls.ToList();
+			_controls.Clear();
+			foreach (ControlBase control in controls)
+			{
+				control.Dispose();
+			}
+		}
+	}
 }

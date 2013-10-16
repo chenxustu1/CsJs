@@ -3,6 +3,11 @@ CsJs
 
 A C# MVVM Framework using the Saltarelle compiler to generate JavaScript code.
 
+License
+-------
+
+The entire project is licensed under the Apache License 2.0, which is a permissive license, so there is no issue using the software in any kind of application, commercial or non-commercial.
+
 Features
 --------
 
@@ -28,10 +33,28 @@ To try to merge the best of both worlds together, CsJs was created.  The goal is
 Status
 ------
 
-Currently, CsJs is as alpha as can be.  If an alpha version is 0.1, this is 0.01.  However, the ideas are firmly in place and waiting to be expanded upon.  A proof-of-concept application is included to show the ease with which applications may be built using this framework.
+Currently, CsJs is in an alpha stage.  However, the ideas are firmly in place and waiting to be expanded upon.  A proof-of-concept application is included to show the ease with which applications may be built using this framework.
 
 The SOAP Client is fully working as well as the web service client generator.  There are likely to be some bugs found, but it works pretty well and covers most use cases that would be involved with calling a WCF service.  Support still needs to be added for XML attributes, which would more likely be found with an ASMX web service or a web service written in a non-.NET language.
 
 The building blocks for ViewModels are pretty well in place as well.
 
 The Control suite is where the framework shows its infancy.  Currently, there are only a few controls ready for use.  However, many more are planned for development.  Since this is open source, feel free to add any Controls you would like to see and make a Pull Request.
+
+Building
+--------
+
+To build CsJs and run the sample solution, first build the VSIXExtension solution in the Tools folder in the Release configuration.  Then install the VSIX file in the ExtensionPackage\bin\Release folder.
+
+Next, build the Core solution in Release configuration twice.  (The first build misses copying one of the ouput JavaScript files to the bin directory.  I am looking into why this happens and will correct it soon.)
+
+Finally, build the CalculatorsAndStopwatch solution in the Examples folder, and start the Server.Web.UI project.
+
+In order to successfully browse the site, you may need to assign the Read & execute, List folder contents, and Read permissions to the Application Pool user and the IIS Web Site anonymous user.  Usually, assigning these permissions to the Users group will suffice.
+
+The sample application shows the functionality of the controls developed so far.  Switching pages (the button at the top) will allow you to see different portions of functionality in development, such as the grid control.  On the starting page, switching to Calculator 2 will cause the calculator to call through a web service to obtain its result rather than computing it on the client.  The Simulate Latency option will randomly sleep up to 5 seconds on the server to test the async functionality.  Setting this property to No showcases the speed with which web service calls may be made.
+
+Feedback
+--------
+
+All feedback is welcome.  Feel free to open an Issue or contribute code to the project.
