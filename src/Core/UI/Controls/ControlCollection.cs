@@ -1,115 +1,147 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Html;
 using System.Linq;
 using MorseCode.CsJs.Common.Observable;
-using MorseCode.CsJs.ViewModel;
 
 namespace MorseCode.CsJs.UI.Controls
 {
-    public class ControlCollection : ObservableCollection<ControlBase>
-    {
-        private readonly CompositeControlBase _owner;
+	public class ControlCollection : ObservableCollection<ControlBase>
+	{
+		private readonly Func<Element> _childElementContainer;
 
-        public ControlCollection(CompositeControlBase owner)
-        {
-            _owner = owner;
-        }
+		public ControlCollection(Func<Element> childElementContainer)
+		{
+			_childElementContainer = childElementContainer;
+		}
 
-        protected override void OnItemAdded(ControlBase item)
-        {
-            base.OnItemAdded(item);
+		internal Element GetChildElementContainer()
+		{
+			return _childElementContainer();
+		}
 
-            item.Parent = _owner;
+		protected override void OnItemAdded(ControlBase item)
+		{
+			base.OnItemAdded(item);
 
-            OnControlAdded(new ControlAddedEventArgs(item));
-        }
+			item.Parent = this;
+			item.AddControlTo(GetChildElementContainer());
 
-        protected virtual void OnControlAdded(ControlAddedEventArgs e)
-        {
-            if (ControlAdded != null)
-            {
-                ControlAdded(this, e);
-            }
-        }
+			OnControlAdded(new ControlAddedEventArgs(item));
+		}
 
-        public event EventHandler<ControlAddedEventArgs> ControlAdded;
+		protected virtual void OnControlAdded(ControlAddedEventArgs e)
+		{
+			if (ControlAdded != null)
+			{
+				ControlAdded(this, e);
+			}
+		}
 
-        protected override void OnItemRemoved(ControlBase item)
-        {
-            base.OnItemRemoved(item);
+		public event EventHandler<ControlAddedEventArgs> ControlAdded;
 
-            item.Parent = null;
+		protected override void OnItemRemoved(ControlBase item)
+		{
+			base.OnItemRemoved(item);
 
-            OnControlRemoved(new ControlRemovedEventArgs(item));
-        }
+			item.Parent = null;
+			item.RemoveControlFrom(GetChildElementContainer());
 
-        protected virtual void OnControlRemoved(ControlRemovedEventArgs e)
-        {
-            if (ControlRemoved != null)
-            {
-                ControlRemoved(this, e);
-            }
-        }
+			OnControlRemoved(new ControlRemovedEventArgs(item));
+		}
 
-        public event EventHandler<ControlRemovedEventArgs> ControlRemoved;
+		protected virtual void OnControlRemoved(ControlRemovedEventArgs e)
+		{
+			if (ControlRemoved != null)
+			{
+				ControlRemoved(this, e);
+			}
+		}
 
-        protected override void OnItemsReset(IEnumerable<ControlBase> oldItems, IEnumerable<ControlBase> newItems)
-        {
-            base.OnItemsReset(oldItems, newItems);
+		public event EventHandler<ControlRemovedEventArgs> ControlRemoved;
 
-            oldItems.ForEach(i => i.Parent = null);
-            newItems.ForEach(i => i.Parent = _owner);
+		protected override void OnItemsReset(IEnumerable<ControlBase> oldItems, IEnumerable<ControlBase> newItems)
+		{
+			List<ControlBase> oldItemsList = oldItems.ToList();
+			List<ControlBase> newItemsList = newItems.ToList();
 
-            OnControlsReset(new ControlsResetEventArgs(oldItems, newItems));
-        }
+			base.OnItemsReset(oldItemsList, newItemsList);
 
-        protected virtual void OnControlsReset(ControlsResetEventArgs e)
-        {
-            if (ControlsReset != null)
-            {
-                ControlsReset(this, e);
-            }
-        }
+			Element childElementContainer = GetChildElementContainer();
+			oldItemsList.ForEach(i =>
+				{
+					i.Parent = null;
+					i.RemoveControlFrom(childElementContainer);
+				});
+			newItemsList.ForEach(i =>
+				{
+					i.Parent = this;
+					i.AddControlTo(childElementContainer);
+				});
 
-        public event EventHandler<ControlsResetEventArgs> ControlsReset;
-    }
+			OnControlsReset(new ControlsResetEventArgs(oldItemsList, newItemsList));
+		}
 
-    public class ControlAddedEventArgs : EventArgs
-    {
-        private readonly ControlBase _control;
+		protected virtual void OnControlsReset(ControlsResetEventArgs e)
+		{
+			if (ControlsReset != null)
+			{
+				ControlsReset(this, e);
+			}
+		}
 
-        public ControlAddedEventArgs(ControlBase control)
-        {
-            _control = control;
-        }
+		public event EventHandler<ControlsResetEventArgs> ControlsReset;
+	}
 
-        public ControlBase Control { get { return _control; } }
-    }
+	public class ControlAddedEventArgs : EventArgs
+	{
+		private readonly ControlBase _control;
 
-    public class ControlRemovedEventArgs : EventArgs
-    {
-        private readonly ControlBase _control;
+		public ControlAddedEventArgs(ControlBase control)
+		{
+			_control = control;
+		}
 
-        public ControlRemovedEventArgs(ControlBase control)
-        {
-            _control = control;
-        }
+		public ControlBase Control
+		{
+			get { return _control; }
+		}
+	}
 
-        public ControlBase Control { get { return _control; } }
-    }
+	public class ControlRemovedEventArgs : EventArgs
+	{
+		private readonly ControlBase _control;
 
-    public class ControlsResetEventArgs : EventArgs
-    {
-        private readonly IEnumerable<ControlBase> _oldControls;
-        private readonly IEnumerable<ControlBase> _newControls;
+		public ControlRemovedEventArgs(ControlBase control)
+		{
+			_control = control;
+		}
 
-        public ControlsResetEventArgs(IEnumerable<ControlBase> oldControls, IEnumerable<ControlBase> newControls)
-        {
-            _oldControls = oldControls;
-            _newControls = newControls;
-        }
+		public ControlBase Control
+		{
+			get { return _control; }
+		}
+	}
 
-        public IEnumerable<ControlBase> OldControls { get { return _oldControls; } }
-        public IEnumerable<ControlBase> NewControls { get { return _newControls; } }
-    }
+	public class ControlsResetEventArgs : EventArgs
+	{
+		private readonly IEnumerable<ControlBase> _oldControls;
+		private readonly IEnumerable<ControlBase> _newControls;
+
+		public ControlsResetEventArgs(IEnumerable<ControlBase> oldControls, IEnumerable<ControlBase> newControls)
+		{
+			_oldControls = oldControls;
+			_newControls = newControls;
+		}
+
+		public IEnumerable<ControlBase> OldControls
+		{
+			get { return _oldControls; }
+		}
+
+		public IEnumerable<ControlBase> NewControls
+		{
+			get { return _newControls; }
+		}
+	}
 }
